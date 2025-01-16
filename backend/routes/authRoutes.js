@@ -17,7 +17,7 @@ router.post('/login', authLimiter, authController.login);
 router.post('/logout', authController.logout);
 
 // Protected routes
-router.get('/me', protect, authController.getCurrentUser);
+// router.get('/me', protect, authController.getCurrentUser);
 router.put('/profile', protect, authController.updateProfile);
 
 // Admin routes
