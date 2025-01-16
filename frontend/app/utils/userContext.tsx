@@ -1,70 +1,131 @@
-"use client";
+'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import apiClient from './apiClient';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { authApi, User, UpdateProfileData } from './apiClient';
+import { useRouter } from 'next/navigation'; // Import useRouter
 
-interface User {
-    username: string;
-    role: string;
-}
-
-interface UserContextType {
+interface AuthContextType {
     user: User | null;
-    isLoading: boolean;
+    loading: boolean;
+    actionLoading: boolean;
     error: string | null;
+    login: (email: string, password: string) => Promise<void>;
+    register: (userData: { username: string; email: string; password: string; role?: string }) => Promise<void>;
+    logout: () => Promise<void>;
+    updateProfile: (data: UpdateProfileData) => Promise<void>;
+    clearError: () => void; // Add a function to clear the error
 }
 
-const UserContext = createContext<UserContextType>({
-    user: null,
-    isLoading: true,
-    error: null
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-
-export const UserProvider = ({ children }: { children: React.ReactNode }) => {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [loading, setLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const router = useRouter();
-
+    const router = useRouter(); // Initialize useRouter
 
     useEffect(() => {
-        const fetchUser = async () => {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                setIsLoading(false);
-                return;
-            }
+        let isMounted = true;
 
+        const checkAuth = async () => {
             try {
-                const res = await apiClient.get('/auth/user', {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
-                setUser(res.data);
+                const userData = await authApi.getCurrentUser();
+                if (isMounted) setUser(userData);
             } catch (err) {
-                console.error('Failed to fetch user:', err);
-                setError('Failed to fetch user data.');
-                localStorage.removeItem('token');
+                if (isMounted) {
+                    console.error('Auth check failed:', err);
+                    // Optionally, don't set an error here if it's the initial load and the user is simply not logged in
+                    // setError('Failed to check authentication status');
+                    setUser(null);
+                }
             } finally {
-                setIsLoading(false);
+                if (isMounted) setLoading(false);
             }
         };
 
-        fetchUser();
-    }, [router]);
+        checkAuth();
 
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    const login = async (email: string, password: string) => {
+        try {
+            setError(null);
+            setActionLoading(true);
+            const { user } = await authApi.login({ email, password });
+            setUser(user);
+            router.push('/dashboard'); // Redirect on successful login
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'Login failed');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const register = async (userData: { username: string; email: string; password: string; role?: string }) => {
+        try {
+            setError(null);
+            setActionLoading(true);
+            const { user } = await authApi.register({
+                ...userData,
+                role: userData.role || 'student', // Match backend default
+            });
+            setUser(user);
+            router.push('/dashboard'); // Redirect on successful registration
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'Registration failed');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const logout = async () => {
+        try {
+            setError(null);
+            setActionLoading(true);
+            await authApi.logout();
+            setUser(null);
+            router.push('/login'); // Redirect to login after logout
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'Logout failed');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const updateProfile = async (data: UpdateProfileData) => {
+        try {
+            setError(null);
+            setActionLoading(true);
+            const updatedUser = await authApi.updateProfile(data);
+            setUser(updatedUser);
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'Profile update failed');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const clearError = () => {
+        setError(null);
+    };
 
     return (
-        <UserContext.Provider value={{ user, isLoading, error }}>
+        <AuthContext.Provider value={{ user, loading, actionLoading, error, login, register, logout, updateProfile, clearError }}>
             {children}
-        </UserContext.Provider>
+        </AuthContext.Provider>
     );
-};
+}
 
+export function useAuth() {
+    const context = useContext(AuthContext);
+    if (context === undefined) {
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
+    return context;
+}
 
-export const useUser = () => {
-    return useContext(UserContext);
-};
+export { AuthContext };
