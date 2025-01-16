@@ -1,44 +1,38 @@
-"use client";
+'use client';
 
-import { useEffect } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser } from '../utils/userContext';
+import { useAuth } from '../utils/userContext';
 
 interface AuthProps {
     children: React.ReactNode;
-    allowedRoles?: string[];
+    requiredRole?: string[];
 }
 
-const Auth = ({ children, allowedRoles }: AuthProps) => {
+const Auth: React.FC<AuthProps> = ({ children, requiredRole }) => {
     const router = useRouter();
-    const { user, isLoading, error } = useUser();
+    const { user, loading } = useAuth();
 
-
-    useEffect(() => {
-        if (!isLoading && error === 'Failed to fetch user data.') {
-            router.push('/login');
-            return
+    React.useEffect(() => {
+        if (!loading) {
+            if (!user) {
+                router.push('/login');
+            } else if (requiredRole && !requiredRole.includes(user.role)) {
+                router.push('/not-authorized');
+            }
         }
-    }, [isLoading, error, router]);
+    }, [user, loading, router, requiredRole]);
 
-    useEffect(() => {
-        if (!user || isLoading) {
-            return;
-        }
-
-        const userRole = user.role;
-
-        if (allowedRoles && !allowedRoles.includes(userRole)) {
-            router.push('/not-authorized');
-        }
-    }, [user, allowedRoles, router, isLoading]);
-
-    if (isLoading) {
-        return <p>Loading...</p>;
+    if (loading) {
+        return <div>Loading...</div>;
     }
 
-    if (error) {
-        return null
+    if (!user) {
+        return null;
+    }
+
+    if (requiredRole && !requiredRole.includes(user.role)) {
+        return null;
     }
 
     return <>{children}</>;
