@@ -92,21 +92,6 @@ export const authApi = {
         }
     },
 
-    getCurrentUser: async (): Promise<User> => {
-        try {
-            const response = await apiClient.get('/auth/me');
-            return response.data;
-        } catch (error: any) {
-            const apiError: ApiError = {
-                status: error.response?.status,
-                message: error.response?.data?.message || 'Failed to fetch current user',
-                data: error.response?.data,
-            };
-            console.error('GetCurrentUser API Error:', apiError);
-            throw apiError;
-        }
-    },
-
     updateProfile: async (userData: UpdateProfileData): Promise<User> => {
         try {
             const response = await apiClient.put('/auth/profile', userData);
