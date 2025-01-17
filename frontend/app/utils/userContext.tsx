@@ -1,8 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { authApi, User, UpdateProfileData } from './apiClient';
-import { useRouter } from 'next/navigation'; // Import useRouter
+import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
     user: User | null;
@@ -13,53 +13,38 @@ interface AuthContextType {
     register: (userData: { username: string; email: string; password: string; role?: string }) => Promise<void>;
     logout: () => Promise<void>;
     updateProfile: (data: UpdateProfileData) => Promise<void>;
-    clearError: () => void; // Add a function to clear the error
+    clearError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState<User | null>(() => {
+        // Check if we're in the browser and if there's a stored user
+        if (typeof window !== 'undefined') {
+            const storedUser = localStorage.getItem('user');
+            return storedUser ? JSON.parse(storedUser) : null;
+        }
+        return null;
+    });
+    const [loading, setLoading] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const router = useRouter(); // Initialize useRouter
-
-    useEffect(() => {
-        let isMounted = true;
-
-        const checkAuth = async () => {
-            try {
-                const userData = await authApi.getCurrentUser();
-                if (isMounted) setUser(userData);
-            } catch (err) {
-                if (isMounted) {
-                    console.error('Auth check failed:', err);
-                    // Optionally, don't set an error here if it's the initial load and the user is simply not logged in
-                    // setError('Failed to check authentication status');
-                    setUser(null);
-                }
-            } finally {
-                if (isMounted) setLoading(false);
-            }
-        };
-
-        checkAuth();
-
-        return () => {
-            isMounted = false;
-        };
-    }, []);
+    const router = useRouter();
 
     const login = async (email: string, password: string) => {
         try {
             setError(null);
             setActionLoading(true);
-            const { user } = await authApi.login({ email, password });
-            setUser(user);
-            router.push('/dashboard'); // Redirect on successful login
+            const { user: userData } = await authApi.login({ email, password });
+            
+            // Store user data in localStorage
+            localStorage.setItem('user', JSON.stringify(userData));
+            setUser(userData);
+            router.push('/dashboard');
         } catch (err: any) {
             setError(err.response?.data?.message || 'Login failed');
+            throw err;
         } finally {
             setActionLoading(false);
         }
@@ -69,14 +54,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             setError(null);
             setActionLoading(true);
-            const { user } = await authApi.register({
+            const { user: newUser } = await authApi.register({
                 ...userData,
-                role: userData.role || 'student', // Match backend default
+                role: userData.role || 'student',
             });
-            setUser(user);
-            router.push('/dashboard'); // Redirect on successful registration
+            
+            // Store user data in localStorage
+            localStorage.setItem('user', JSON.stringify(newUser));
+            setUser(newUser);
+            router.push('/dashboard');
         } catch (err: any) {
             setError(err.response?.data?.message || 'Registration failed');
+            throw err;
         } finally {
             setActionLoading(false);
         }
@@ -87,8 +76,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setError(null);
             setActionLoading(true);
             await authApi.logout();
+            
+            // Clear user data from localStorage
+            localStorage.removeItem('user');
             setUser(null);
-            router.push('/login'); // Redirect to login after logout
+            router.push('/login');
         } catch (err: any) {
             setError(err.response?.data?.message || 'Logout failed');
         } finally {
@@ -101,6 +93,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setError(null);
             setActionLoading(true);
             const updatedUser = await authApi.updateProfile(data);
+            
+            // Update user data in localStorage
+            localStorage.setItem('user', JSON.stringify(updatedUser));
             setUser(updatedUser);
         } catch (err: any) {
             setError(err.response?.data?.message || 'Profile update failed');
@@ -114,7 +109,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, actionLoading, error, login, register, logout, updateProfile, clearError }}>
+        <AuthContext.Provider value={{
+            user,
+            loading,
+            actionLoading,
+            error,
+            login,
+            register,
+            logout,
+            updateProfile,
+            clearError
+        }}>
             {children}
         </AuthContext.Provider>
     );
