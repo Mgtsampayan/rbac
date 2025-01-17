@@ -53,19 +53,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 if (storedUser) {
                     const parsedUser = JSON.parse(storedUser);
                     setUser(parsedUser);
-                    // Optionally verify the token with the server for enhanced security
-                    try {
-                        await authApi.getCurrentUser(); // Just to validate session
-                        setUser(parsedUser);
-                    } catch (apiError: any) {
-                        if (apiError.status === 401) {
-                            console.warn("Stored user session invalid, logging out.");
-                            removeUser();
-                            setUser(null);
-                        } else {
-                            console.error("Error validating user session:", apiError);
-                        }
-                    }
                 }
             } catch (error) {
                 console.error("Error loading user from localStorage:", error);
