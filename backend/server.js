@@ -1,3 +1,4 @@
+// backend/server.js
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -22,22 +23,10 @@ app.use(cors({
 app.use(cookieParser());
 app.use(express.json());
 
-// Rate limiting
-import rateLimit from 'express-rate-limit'; // Already imported
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100 // limit each IP to 100 requests per windowMs
-});
-app.use('/api/', limiter);
+// Rate limiting (moved to authMiddleware)
 
 // Routes
 app.use('/api/auth', authRoutes);
-
-// Sample /api/auth/current-user route (for testing)
-// app.get('/api/auth/current-user', (req, res) => {
-//     // Example response
-//     res.json({ user: { id: '123', username: 'example', email: 'example@example.com' } });
-// });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
