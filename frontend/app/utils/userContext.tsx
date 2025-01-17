@@ -1,3 +1,4 @@
+// frontend/utils/userContext.tsx
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -71,7 +72,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const { user: userData } = await authApi.login({ email, password });
             storeUser(userData);
             setUser(userData);
-            router.push('/dashboard');
+            // Redirect based on role
+            switch (userData.role) {
+                case 'admin':
+                    router.push('/admin');
+                    break;
+                case 'student':
+                    router.push('/student');
+                    break;
+                case 'faculty':
+                    router.push('/faculty');
+                    break;
+                case 'registrar':
+                    router.push('/registrar');
+                    break;
+                case 'accounting':
+                    router.push('/accounting');
+                    break;
+                case 'hr':
+                    router.push('/hr');
+                    break;
+                case 'parent':
+                    router.push('/parent');
+                    break;
+                default:
+                    router.push('/dashboard'); // Default fallback
+                    break;
+            }
         } catch (err: any) {
             setError(err.message || 'Login failed');
         } finally {
@@ -89,6 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             });
             storeUser(newUser);
             setUser(newUser);
+            // Redirect to default dashboard after registration
             router.push('/dashboard');
         } catch (err: any) {
             setError(err.message || 'Registration failed');
