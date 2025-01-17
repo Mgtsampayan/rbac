@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -10,12 +10,19 @@ const apiClient = axios.create({
     withCredentials: true,
 });
 
+// Custom error type for API errors
+export interface ApiError {
+    status?: number;
+    message?: string;
+    data?: any;
+}
+
 apiClient.interceptors.request.use(
     (config) => {
         console.log('Request Interceptor:', config);
         return config;
     },
-    (error) => {
+    (error: AxiosError) => {
         console.error('Request Error Interceptor:', error);
         return Promise.reject(error);
     }
@@ -26,65 +33,92 @@ apiClient.interceptors.response.use(
         console.log('Response Interceptor:', response);
         return response;
     },
-    async (error) => {
+    async (error: AxiosError) => {
         console.error('Response Error Interceptor:', error);
         if (error.response?.status === 401) {
-            // Consider notifying the user instead of a direct redirect
-            console.warn('Unauthorized access, redirecting to login');
-            window.location.href = '/login';
+            console.warn('Unauthorized access detected.');
+            // Instead of direct redirect, throw a specific error
+            return Promise.reject({
+                status: 401,
+                message: 'Unauthorized',
+            } as ApiError);
         }
         return Promise.reject(error);
     }
 );
 
 export const authApi = {
-    register: async (userData: RegisterData) => {
+    register: async (userData: RegisterData): Promise<{ user: User }> => {
         try {
             const response = await apiClient.post('/auth/register', userData);
             return response.data;
         } catch (error: any) {
-            console.error('Registration API Error:', error);
-            throw error; // Re-throw to be caught by the component
+            const apiError: ApiError = {
+                status: error.response?.status,
+                message: error.response?.data?.message || 'Registration failed',
+                data: error.response?.data,
+            };
+            console.error('Registration API Error:', apiError);
+            throw apiError;
         }
     },
 
-    login: async (credentials: LoginCredentials) => {
+    login: async (credentials: LoginCredentials): Promise<{ user: User }> => {
         try {
             const response = await apiClient.post('/auth/login', credentials);
             return response.data;
         } catch (error: any) {
-            console.error('Login API Error:', error);
-            throw error;
+            const apiError: ApiError = {
+                status: error.response?.status,
+                message: error.response?.data?.message || 'Login failed',
+                data: error.response?.data,
+            };
+            console.error('Login API Error:', apiError);
+            throw apiError;
         }
     },
 
-    logout: async () => {
+    logout: async (): Promise<void> => {
         try {
-            const response = await apiClient.post('/auth/logout');
+            await apiClient.post('/auth/logout');
+        } catch (error: any) {
+            const apiError: ApiError = {
+                status: error.response?.status,
+                message: error.response?.data?.message || 'Logout failed',
+                data: error.response?.data,
+            };
+            console.error('Logout API Error:', apiError);
+            throw apiError;
+        }
+    },
+
+    getCurrentUser: async (): Promise<User> => {
+        try {
+            const response = await apiClient.get('/auth/me');
             return response.data;
         } catch (error: any) {
-            console.error('Logout API Error:', error);
-            throw error;
+            const apiError: ApiError = {
+                status: error.response?.status,
+                message: error.response?.data?.message || 'Failed to fetch current user',
+                data: error.response?.data,
+            };
+            console.error('GetCurrentUser API Error:', apiError);
+            throw apiError;
         }
     },
 
-    // getCurrentUser: async () => {
-    //     try {
-    //         const response = await apiClient.get('/auth/me'); // Changed to /auth/me to match backend
-    //         return response.data;
-    //     } catch (error: any) {
-    //         console.error('GetCurrentUser API Error:', error);
-    //         throw error;
-    //     }
-    // },
-
-    updateProfile: async (userData: UpdateProfileData) => {
+    updateProfile: async (userData: UpdateProfileData): Promise<User> => {
         try {
             const response = await apiClient.put('/auth/profile', userData);
             return response.data;
         } catch (error: any) {
-            console.error('UpdateProfile API Error:', error);
-            throw error;
+            const apiError: ApiError = {
+                status: error.response?.status,
+                message: error.response?.data?.message || 'Profile update failed',
+                data: error.response?.data,
+            };
+            console.error('UpdateProfile API Error:', apiError);
+            throw apiError;
         }
     }
 };
