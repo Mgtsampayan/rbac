@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-// import { useRouter } from 'next/navigation';
 import { useAuth } from '../utils/userContext';
 import Link from 'next/link';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function RegisterPage() {
-    // const router = useRouter();
-    const { register, error, clearError } = useAuth(); // Include clearError
+    const { register, error, clearError, isAuthenticated } = useAuth();
     const [formData, setFormData] = useState({
         username: '',
         email: '',
@@ -15,6 +15,14 @@ export default function RegisterPage() {
         confirmPassword: ''
     });
     const [formError, setFormError] = useState('');
+    const router = useRouter();
+
+    // Redirect if already authenticated
+    useEffect(() => {
+        if (isAuthenticated) {
+            router.push('/dashboard');
+        }
+    }, [isAuthenticated, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -32,7 +40,7 @@ export default function RegisterPage() {
                 email: formData.email,
                 password: formData.password
             });
-            // router.push('/dashboard'); // Redirection is handled in userContext
+            // Redirection is handled in userContext
         } catch (err) {
             console.error('Registration failed:', err);
             // Error is now handled and displayed by the AuthContext
@@ -56,9 +64,9 @@ export default function RegisterPage() {
             {(error || formError) && (
                 <div>
                     <span>{error || formError}</span>
-                    <span onClick={clearError}> {/* Make clickable */}
+                    <button onClick={clearError} aria-label="Close error message">
                         Close
-                    </span>
+                    </button>
                 </div>
             )}
             <form onSubmit={handleSubmit}>
