@@ -17,7 +17,7 @@ const Auth: React.FC<AuthProps> = ({ children, requiredRole }) => {
         if (!loading) {
             if (!user) {
                 router.push('/login');
-            } else if (requiredRole && !requiredRole.includes(user.role)) {
+            } else if (requiredRole && !requiredRole.some(role => user.role === role)) {
                 router.push('/not-authorized');
             }
         }
@@ -31,7 +31,7 @@ const Auth: React.FC<AuthProps> = ({ children, requiredRole }) => {
         return null;
     }
 
-    if (requiredRole && !requiredRole.includes(user.role)) {
+    if (requiredRole && !requiredRole.some(role => user.role === role)) {
         return null;
     }
 
