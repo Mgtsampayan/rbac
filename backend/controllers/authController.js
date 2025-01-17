@@ -127,6 +127,47 @@ const authController = {
     //     }
     // },
 
+    createAdminUser: async (req, res) => {
+        try {
+            const { username, email, password, role } = req.body;
+
+            // Basic validation - you might want to add more robust validation
+            if (!username || !email || !password || !role) {
+                return res.status(400).json({ message: 'Please provide all required fields.' });
+            }
+
+            if (!['admin', 'faculty', 'registrar', 'accounting', 'hr', 'parent'].includes(role)) {
+                return res.status(400).json({ message: 'Invalid role specified.' });
+            }
+
+            // Check if user with this email or username already exists
+            const userExists = await User.findOne({ $or: [{ email }, { username }] });
+            if (userExists) {
+                return res.status(400).json({ message: 'User already exists' });
+            }
+
+            const user = await User.create({
+                username,
+                email,
+                password,
+                role // Directly use the provided role
+            });
+
+            res.status(201).json({
+                message: 'Admin user created successfully',
+                user: {
+                    id: user._id,
+                    username: user.username,
+                    email: user.email,
+                    role: user.role
+                }
+            });
+        } catch (error) {
+            console.error("Error creating admin user:", error);
+            res.status(500).json({ message: 'Server error', error: error.message });
+        }
+    },
+
     // Update user profile
     updateProfile: async (req, res) => {
         try {
