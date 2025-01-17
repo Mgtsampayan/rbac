@@ -3,20 +3,28 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../utils/userContext';
+import { useEffect } from 'react';
 
 export default function LoginPage() {
     const router = useRouter();
-    const { login, error } = useAuth();
+    const { login, error, isAuthenticated } = useAuth();
     const [formData, setFormData] = useState({
         email: '',
         password: ''
     });
 
+    // Redirect if already authenticated
+    useEffect(() => {
+        if (isAuthenticated) {
+            router.push('/dashboard');
+        }
+    }, [isAuthenticated, router]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
             await login(formData.email, formData.password);
-            router.push('/dashboard');
+            // Redirection is handled in the context on successful login
         } catch (err) {
             // Error is handled by the AuthContext
             console.error('Login failed:', err);
