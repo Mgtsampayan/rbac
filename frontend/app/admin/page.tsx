@@ -6,7 +6,7 @@ import { useState } from 'react';
 import apiClient from '../utils/apiClient';
 
 export default function AdminPage() {
-    const { user, token } = useAuth();
+    const { user } = useAuth();
     const [createUserFormData, setCreateUserFormData] = useState({
         username: '',
         email: '',
@@ -26,11 +26,7 @@ export default function AdminPage() {
         setCreateUserError('');
 
         try {
-            const response = await apiClient.post('/auth/admin/register', createUserFormData, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
+            const response = await apiClient.post('/api/auth/admin/register', createUserFormData);
             setCreateUserMessage(response.data.message);
             // Reset the form
             setCreateUserFormData({ username: '', email: '', password: '', role: 'student' });
