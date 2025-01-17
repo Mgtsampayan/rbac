@@ -1,4 +1,4 @@
-import User from'../models/User.js';
+import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
 
 // Generate JWT Token
@@ -48,6 +48,7 @@ const authController = {
                 }
             });
         } catch (error) {
+            console.error("Registration Error:", error); // Log the full error object
             res.status(500).json({ message: 'Server error', error: error.message });
         }
     },
