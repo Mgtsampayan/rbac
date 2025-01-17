@@ -20,7 +20,9 @@ router.post('/logout', authController.logout);
 // router.get('/me', protect, authController.getCurrentUser);
 router.put('/profile', protect, authController.updateProfile);
 
-// Admin routes
+// Admin route to create new users with specific roles
+router.post('/admin/register', protect, authorize('admin'), authController.createAdminUser);
+
 router.get('/users', protect, authorize('admin'), async (req, res) => {
     try {
         const users = await User.find().select('-password');
