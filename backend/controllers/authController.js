@@ -1,3 +1,4 @@
+// backend/controllers/authController.js
 import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
 
@@ -7,6 +8,13 @@ const generateToken = (id) => {
         expiresIn: '1d'
     });
 };
+
+const formatUserResponse = (user) => ({
+    id: user._id,
+    username: user.username,
+    email: user.email,
+    role: user.role
+});
 
 const authController = {
     // Register new user
@@ -39,14 +47,7 @@ const authController = {
                 maxAge: 24 * 60 * 60 * 1000 // 1 day
             });
 
-            res.status(201).json({
-                user: {
-                    id: user._id,
-                    username: user.username,
-                    email: user.email,
-                    role: user.role
-                }
-            });
+            res.status(201).json({ user: formatUserResponse(user) });
         } catch (error) {
             console.error("Registration Error:", error); // Log the full error object
             res.status(500).json({ message: 'Server error', error: error.message });
@@ -95,14 +96,7 @@ const authController = {
                 maxAge: 24 * 60 * 60 * 1000
             });
 
-            res.json({
-                user: {
-                    id: user._id,
-                    username: user.username,
-                    email: user.email,
-                    role: user.role
-                }
-            });
+            res.json({ user: formatUserResponse(user) });
         } catch (error) {
             res.status(500).json({ message: 'Server error', error: error.message });
         }
@@ -116,16 +110,6 @@ const authController = {
         });
         res.status(200).json({ message: 'Logged out successfully' });
     },
-
-    // Get current user
-    // getCurrentUser: async (req, res) => {
-    //     try {
-    //         const user = await User.findById(req.user.id).select('-password');
-    //         res.json(user);
-    //     } catch (error) {
-    //         res.status(500).json({ message: 'Server error', error: error.message });
-    //     }
-    // },
 
     createAdminUser: async (req, res) => {
         try {
@@ -155,12 +139,7 @@ const authController = {
 
             res.status(201).json({
                 message: 'Admin user created successfully',
-                user: {
-                    id: user._id,
-                    username: user.username,
-                    email: user.email,
-                    role: user.role
-                }
+                user: formatUserResponse(user)
             });
         } catch (error) {
             console.error("Error creating admin user:", error);
@@ -180,7 +159,7 @@ const authController = {
                 { new: true, runValidators: true }
             ).select('-password');
 
-            res.json(user);
+            res.json(formatUserResponse(user));
         } catch (error) {
             res.status(500).json({ message: 'Server error', error: error.message });
         }
