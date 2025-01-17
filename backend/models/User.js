@@ -1,3 +1,4 @@
+// backend/models/User.js
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import validator from 'validator';
@@ -41,11 +42,11 @@ const userSchema = new mongoose.Schema({
     permissions: [{
         type: String,
         validate: {
-            validator: function (value) {
+            validator: function (values) { // Correcting the validator for arrays
                 const validPermissions = ['read', 'write', 'delete', 'manage'];
-                return value.every(permission => validPermissions.includes(permission));
+                return values.every(permission => validPermissions.includes(permission));
             },
-            message: props => `${props.value} contains invalid permissions!`
+            message: props => `One or more permissions are invalid!`
         }
     }],
     failedLoginAttempts: {
