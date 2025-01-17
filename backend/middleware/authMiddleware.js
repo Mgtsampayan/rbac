@@ -1,7 +1,16 @@
+// backend/middleware/authMiddleware.js
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import rateLimit from 'express-rate-limit';
 
-export const protect = async (req, res, next) => {
+// Rate limiter for auth routes
+export const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // 5 attempts per window
+    message: 'Too many login attempts, please try again later'
+});
+
+export const authenticate = async (req, res, next) => {
     try {
         // Get token from cookie or header
         const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
@@ -29,7 +38,7 @@ export const protect = async (req, res, next) => {
 // Role-based authorization
 export const authorize = (...roles) => {
     return (req, res, next) => {
-        if (!roles.includes(req.user.role)) {
+        if (!req.user || !roles.includes(req.user.role)) {
             return res.status(403).json({
                 message: 'Not authorized to access this route'
             });
@@ -38,10 +47,10 @@ export const authorize = (...roles) => {
     };
 };
 
-// Permission-based authorization
+// Permission-based authorization (Needs user.permissions to be populated)
 export const checkPermission = (permission) => {
     return (req, res, next) => {
-        if (!req.user.permissions.includes(permission)) {
+        if (!req.user || !req.user.permissions || !req.user.permissions.includes(permission)) {
             return res.status(403).json({
                 message: 'Not authorized to perform this action'
             });
